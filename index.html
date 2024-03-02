@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Three.js Interactive Objects</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="objectInfo" style="position: absolute; top: 10px; left: 10px; color: white;"></div>
+    <script type="module">
+      import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r127/build/three.module.js';
+
+      // Set up scene
+      const scene = new THREE.Scene();
+
+      // Set up camera
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = 10;
+
+      // Set up renderer
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      // Create a cube with solid color
+      const cubeGeometry = new THREE.BoxGeometry();
+      const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+      const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+      scene.add(cube);
+
+      // Create a torus with solid color
+      const torusGeometry = new THREE.TorusGeometry(0.8, 0.4, 16, 75);
+      const torusMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+      const torus = new THREE.Mesh(torusGeometry, torusMaterial);
+      torus.position.x = -3; // Adjust the position
+      scene.add(torus);
+
+      // Create a cone with solid color
+      const coneGeometry = new THREE.ConeGeometry(1, 2, 32);
+      const coneMaterial = new THREE.MeshLambertMaterial({ color: 0x0000ff });
+      const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+      cone.position.x = 3;
+      scene.add(cone);
+
+      // Create particle system for fireworks
+      const particlesGeometry = new THREE.BufferGeometry();
+      const particlesMaterial = new THREE.PointsMaterial({ size: 0.1, vertexColors: true });
+
+      const particlesCount = 1000;
+      const particlesPositions = new Float32Array(particlesCount * 3);
+      const particlesColors = new Float32Array(particlesCount * 3);
+
+      for (let i = 0; i < particlesCount; i++) {
+        particlesPositions[i * 3] = (Math.random() - 0.5) * 20;
+        particlesPositions[i * 3 + 1] = (Math.random() - 0.5) * 20;
+        particlesPositions[i * 3 + 2] = (Math.random() - 0.5) * 20;
+
+        particlesColors[i * 3] = Math.random();
+        particlesColors[i * 3 + 1] = Math.random();
+        particlesColors[i * 3 + 2] = Math.random();
+      }
+
+      particlesGeometry.setAttribute('position', new THREE.BufferAttribute(particlesPositions, 3));
+      particlesGeometry.setAttribute('color', new THREE.BufferAttribute(particlesColors, 3));
+
+      const particles = new THREE.Points(particlesGeometry, particlesMaterial);
+      scene.add(particles);
+
+      // Create 3D text
+      const fontLoader = new THREE.FontLoader();
+      fontLoader.load('https://threejsfundamentals.org/threejs/resources/threejs/fonts/helvetiker_regular.typeface.json', (font) => {
+        const textGeometry = new THREE.TextGeometry('Three.js Talks', {
+          font: font,
+          size: 1,
+          height: 0.2,
+          curveSegments: 12,
+          bevelEnabled: true,
+          bevelThickness: 0.03,
+          bevelSize: 0.02,
+          bevelOffset: 0,
+          bevelSegments: 5,
+        });
+
+        const textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+        textMesh.position.set(-4, 1, 0); // Adjust the position of the text
+        scene.add(textMesh);
+      });
+
+      // Set up ambient light
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+      scene.add(ambientLight);
+
+      // Set up point light
+      const pointLight = new THREE.PointLight(0xffffff, 1);
+      pointLight.position.set(5, 5, 5);
+      scene.add(pointLight);
+
+      // Set up raycaster for click interaction
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+
+      // Handle mouse click
+      window.addEventListener('click', onMouseClick);
+
+      function onMouseClick(event) {
+        event.preventDefault();
+
+        // Calculate mouse position in normalized device coordinates (-1 to +1)
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        // Update the picking ray with the camera and mouse position
+        raycaster.setFromCamera(mouse, camera);
+
+        // Check for intersections with the cube
+        const intersectsCube = raycaster.intersectObject(cube);
+        if (intersectsCube.length > 0) {
+          displayObjectInfo('Cube', cubeGeometry.parameters);
+        }
+
+        // Check for intersections with the torus
+        const intersectsTorus = raycaster.intersectObject(torus);
+        if (intersectsTorus.length > 0) {
+          displayObjectInfo('Torus', torusGeometry.parameters);
+        }
+
+        // Check for intersections with the cone
+        const intersectsCone = raycaster.intersectObject(cone);
+        if (intersectsCone.length > 0) {
+          displayObjectInfo('Cone', coneGeometry.parameters);
+        }
+      }
+
+      // Function to display object specifications
+      function displayObjectInfo(objectType, parameters) {
+        const objectInfoElement = document.getElementById('objectInfo');
+        objectInfoElement.textContent = `${objectType} Specifications:\n`;
+
+        for (const [key, value] of Object.entries(parameters)) {
+          objectInfoElement.textContent += `${key}: ${value}\n`;
+        }
+      }
+
+      // Set up animation
+      const animate = function () {
+        requestAnimationFrame(animate);
+
+        // Rotate objects
+        cube.rotation.x += 0.01;
+        cube.rotation.y += 0.01;
+        torus.rotation.x += 0.01;
+        torus.rotation.y += 0.01;
+        cone.rotation.x += 0.01;
+        cone.rotation.y += 0.01;
+
+        // Move particles to simulate fireworks
+        particles.rotation.x += 0.01;
+        particles.rotation.y += 0.01;
+
+        renderer.render(scene, camera);
+      };
+
+      // Handle window resize
+      window.addEventListener('resize', () => {
+        const newWidth = window.innerWidth;
+        const newHeight = window.innerHeight;
+
+        camera.aspect = newWidth / newHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(newWidth, newHeight);
+      });
+
+      animate();
+    </script>
+  </body>
+</html>
